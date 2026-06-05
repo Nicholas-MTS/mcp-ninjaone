@@ -10,15 +10,17 @@ import { registerJobTools } from "./tools/jobs.js";
 
 const PORT = parseInt(process.env.PORT ?? "8080", 10);
 
-// Validate required env vars at startup — NinjaOneClient reads these itself
-if (!process.env.NINJAONE_CLIENT_ID || !process.env.NINJAONE_CLIENT_SECRET || !process.env.NINJAONE_INSTANCE) {
+const clientId = process.env.NINJAONE_CLIENT_ID;
+const clientSecret = process.env.NINJAONE_CLIENT_SECRET;
+const instance = process.env.NINJAONE_INSTANCE;
+
+if (!clientId || !clientSecret || !instance) {
   console.error("ERROR: NINJAONE_CLIENT_ID, NINJAONE_CLIENT_SECRET, and NINJAONE_INSTANCE are required");
   process.exit(1);
 }
 
 function buildServer(): McpServer {
-  // NinjaOneClient reads credentials from env vars internally
-  const client = new NinjaOneClient();
+  const client = new NinjaOneClient({ clientId: clientId!, clientSecret: clientSecret!, instance: instance! });
 
   const server = new McpServer({
     name: "ninjaone-mcp",
