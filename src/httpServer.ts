@@ -1,5 +1,5 @@
 import http from "http";
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { NinjaOneClient } from "./ninjaone-client.js";
 import { registerDeviceTools } from "./tools/devices.js";
@@ -10,31 +10,28 @@ import { registerJobTools } from "./tools/jobs.js";
 
 const PORT = parseInt(process.env.PORT ?? "8080", 10);
 
-// Validate required env vars at startup
 const NINJAONE_CLIENT_ID = process.env.NINJAONE_CLIENT_ID;
 const NINJAONE_CLIENT_SECRET = process.env.NINJAONE_CLIENT_SECRET;
 const NINJAONE_INSTANCE = process.env.NINJAONE_INSTANCE ?? "app.ninjarmm.com";
 
 if (!NINJAONE_CLIENT_ID || !NINJAONE_CLIENT_SECRET) {
   console.error(
-    "ERROR: NINJAONE_CLIENT_ID and NINJAONE_CLIENT_SECRET environment variables are required"
+    "ERROR: NINJAONE_CLIENT_ID and NINJAONE_CLIENT_SECRET are required"
   );
   process.exit(1);
 }
 
-// Factory — creates a fresh Server + registered tools per request.
-// Required for stateless StreamableHTTPServerTransport.
-function buildServer(): Server {
+function buildServer(): McpServer {
   const client = new NinjaOneClient(
     NINJAONE_CLIENT_ID!,
     NINJAONE_CLIENT_SECRET!,
     NINJAONE_INSTANCE
   );
 
-  const server = new Server(
-    { name: "ninjaone-mcp", version: "1.0.0" },
-    { capabilities: { tools: {} } }
-  );
+  const server = new McpServer({
+    name: "ninjaone-mcp",
+    version: "1.0.0",
+  });
 
   registerDeviceTools(server, client);
   registerOrganizationTools(server, client);
@@ -46,18 +43,16 @@ function buildServer(): Server {
 }
 
 const httpServer = http.createServer(async (req, res) => {
-  // Health check — used by Azure Container Apps
   if (req.method === "GET" && req.url === "/health") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ status: "ok", transport: "streamable-http" }));
     return;
   }
 
-  // MCP endpoint — Claude.ai connectors page connects here
   if (req.url === "/mcp") {
     const server = buildServer();
     const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined, // stateless mode
+      sessionIdGenerator: undefined,
     });
 
     res.on("close", () => {
