@@ -10,23 +10,15 @@ import { registerJobTools } from "./tools/jobs.js";
 
 const PORT = parseInt(process.env.PORT ?? "8080", 10);
 
-const NINJAONE_CLIENT_ID = process.env.NINJAONE_CLIENT_ID;
-const NINJAONE_CLIENT_SECRET = process.env.NINJAONE_CLIENT_SECRET;
-const NINJAONE_INSTANCE = process.env.NINJAONE_INSTANCE ?? "app.ninjarmm.com";
-
-if (!NINJAONE_CLIENT_ID || !NINJAONE_CLIENT_SECRET) {
-  console.error(
-    "ERROR: NINJAONE_CLIENT_ID and NINJAONE_CLIENT_SECRET are required"
-  );
+// Validate required env vars at startup — NinjaOneClient reads these itself
+if (!process.env.NINJAONE_CLIENT_ID || !process.env.NINJAONE_CLIENT_SECRET || !process.env.NINJAONE_INSTANCE) {
+  console.error("ERROR: NINJAONE_CLIENT_ID, NINJAONE_CLIENT_SECRET, and NINJAONE_INSTANCE are required");
   process.exit(1);
 }
 
 function buildServer(): McpServer {
-  const client = new NinjaOneClient(
-    NINJAONE_CLIENT_ID!,
-    NINJAONE_CLIENT_SECRET!,
-    NINJAONE_INSTANCE
-  );
+  // NinjaOneClient reads credentials from env vars internally
+  const client = new NinjaOneClient();
 
   const server = new McpServer({
     name: "ninjaone-mcp",
@@ -72,7 +64,6 @@ httpServer.listen(PORT, "0.0.0.0", () => {
   console.error(`NinjaOne MCP server listening on port ${PORT}`);
   console.error(`MCP endpoint:   http://0.0.0.0:${PORT}/mcp`);
   console.error(`Health check:   http://0.0.0.0:${PORT}/health`);
-  console.error(`Instance:       ${NINJAONE_INSTANCE}`);
 });
 
 httpServer.on("error", (err) => {
